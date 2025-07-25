@@ -518,54 +518,9 @@ const eventPaymentPayzone = async (req, res) => {
             return res.json({ success: false, message: "User not found" });
         }
 
-        let finalPrice = event.price;
-        let usedPromoCode = null;
-
-        // Apply promo code if provided
-        if (promoCode && !event.isFree) {
-            const promo = await promoCodeModel.findOne({ 
-                code: promoCode,
-                serviceId: event.serviceId,
-                isActive: true,
-                validFrom: { $lte: new Date() },
-                validUntil: { $gte: new Date() }
-            });
-
-            if (promo) {
-                // Apply discount
-                if (promo.discountType === 'fixed') {
-                    finalPrice = Math.max(0, finalPrice - promo.discountValue);
-                } else {
-                    finalPrice = finalPrice * (1 - promo.discountValue / 100);
-                }
-                usedPromoCode = promoCode;
-            }
-        }
-
-        // Get client IP address
-        const clientIp = req.headers['x-forwarded-for'] || 
-                         req.headers['x-real-ip'] || 
-                         req.connection.remoteAddress || 
-                         req.socket.remoteAddress ||
-                         (req.connection.socket ? req.connection.socket.remoteAddress : null) ||
-                         req.ip || '127.0.0.1';
-
-        const paymentUrl = process.env.PAYZONE_PAYMENT_URL || 'https://vps.les-experts.ma/';
-
         res.json({
             success: true,
-            paymentData: {
-                url: paymentUrl,
-                customerId: userId,
-                orderId: eventId,
-                price: finalPrice,
-                description: `Inscription événement: ${event.title}`,
-                customerEmail: userData.email,
-                customerName: userData.name,
-                ipAddress: clientIp,
-                applicationSource: "Experlik",
-                promoCode: usedPromoCode || ''
-            }
+            message: "Payment data prepared for frontend processing"
         });
 
     } catch (error) {

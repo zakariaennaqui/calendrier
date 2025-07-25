@@ -336,31 +336,9 @@ const paymentPayzone = async (req, res) => {
       return res.json({ success: false, message: "User not found" });
     }
 
-    // Get client IP address
-    const clientIp = req.headers['x-forwarded-for'] || 
-                     req.headers['x-real-ip'] || 
-                     req.connection.remoteAddress || 
-                     req.socket.remoteAddress ||
-                     (req.connection.socket ? req.connection.socket.remoteAddress : null) ||
-                     req.ip || '127.0.0.1';
-
-    const amount = appointment.amount;
-
-    const paymentUrl = process.env.PAYZONE_PAYMENT_URL || 'https://vps.les-experts.ma/';
-
     res.json({
       success: true,
-      paymentData: {
-        url: paymentUrl,
-        customerId: userId,
-        orderId: appointmentId,
-        price: amount,
-        description: "Réservation sur Experlik",
-        customerEmail: userData.email,
-        customerName: userData.name,
-        ipAddress: clientIp,
-        applicationSource: "Experlik"
-      }
+      message: "Payment data prepared for frontend processing"
     });
 
   } catch (error) {
@@ -488,31 +466,9 @@ const calendarPaymentPayzone = async (req, res) => {
             return res.json({ success: false, message: "User not found" });
         }
 
-        // Get client IP address
-        const clientIp = req.headers['x-forwarded-for'] || 
-                         req.headers['x-real-ip'] || 
-                         req.connection.remoteAddress || 
-                         req.socket.remoteAddress ||
-                         (req.connection.socket ? req.connection.socket.remoteAddress : null) ||
-                         req.ip || '127.0.0.1';
-
-        const amount = slot.amount;
-
-        const paymentUrl = process.env.PAYZONE_PAYMENT_URL || 'https://vps.les-experts.ma/';
-
         res.json({
             success: true,
-            paymentData: {
-                url: paymentUrl,
-                customerId: userId,
-                orderId: slotId,
-                price: amount,
-                description: "Réservation créneau sur Experlik",
-                customerEmail: userData.email,
-                customerName: userData.name,
-                ipAddress: clientIp,
-                applicationSource: "Experlik"
-            }
+            message: "Payment data prepared for frontend processing"
         });
 
     } catch (error) {

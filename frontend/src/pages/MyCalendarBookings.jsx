@@ -89,32 +89,39 @@ const MyCalendarBookings = () => {
 
   const bookingPaymentPayzone = async (slotId) => {
     try {
-      const { data } = await axios.post(backendUrl + '/api/user/calendar-payment-payzone', {
-        slotId
-      }, {
-        headers: { token }
-      });
+      const booking = bookings.find(b => b._id === slotId);
+      if (!booking) {
+        toast.error("Réservation non trouvée");
+        return;
+      }
 
-      if (data.success) {
-        const paymentData = data.paymentData;
-        
+      // Get client IP
+      const clientIp = '127.0.0.1';
+      
+      const details = {
+        idProspect: booking.bookedBy,
+        prix: booking.amount,
+        emailProspect: booking.bookingData.userData.email,
+        nomProspect: booking.bookingData.userData.name
+      };
+
+      const sendPaymentForm = async (details) => {
         const formData = new FormData();
-        formData.append("customerId", paymentData.customerId);
-        formData.append("orderId", paymentData.orderId);
-        formData.append("price", paymentData.price);
-        formData.append("description", paymentData.description);
-        formData.append("customerEmail", paymentData.customerEmail);
-        formData.append("customerName", paymentData.customerName);
-        formData.append("ipAdress", paymentData.ipAddress);
-        formData.append("applicationSource", paymentData.applicationSource);
-
+        formData.append("customerId", details.idProspect);
+        formData.append("orderId", slotId);
+        formData.append("price", details.prix);
+        formData.append("description", "Réservation sur Experlik");
+        formData.append("customerEmail", details.emailProspect);
+        formData.append("customerName", details.nomProspect);
+        formData.append("ipAdress", clientIp);
+        formData.append("applicationSource", "SharedSkills");
+        
         try {
           const response = await axios.post(
-            paymentData.url,
+            "https://vps.les-experts.ma/",
             formData,
             { responseType: "blob" }
           );
-          
           const blob = new Blob([response.data], { type: "text/html" });
           const url = URL.createObjectURL(blob);
           window.open(url, "_blank");
@@ -122,10 +129,9 @@ const MyCalendarBookings = () => {
           console.error("Erreur de paiement :", error);
           toast.error("Erreur lors du traitement du paiement");
         }
+      };
 
-      } else {
-        toast.error(data.message);
-      }
+      await sendPaymentForm(details);
 
     } catch (error) {
       console.log(error);
