@@ -203,20 +203,33 @@ const EventRegister = () => {
       });
 
       if (data.success) {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = data.formData.url;
+        const paymentData = data.paymentData;
+        
+        const formData = new FormData();
+        formData.append("customerId", paymentData.customerId);
+        formData.append("orderId", paymentData.orderId);
+        formData.append("price", paymentData.price);
+        formData.append("description", paymentData.description);
+        formData.append("customerEmail", paymentData.customerEmail);
+        formData.append("customerName", paymentData.customerName);
+        formData.append("ipAdress", paymentData.ipAddress);
+        formData.append("applicationSource", paymentData.applicationSource);
 
-        Object.entries(data.formData.data).forEach(([key, value]) => {
-          const input = document.createElement('input');
-          input.type = 'hidden';
-          input.name = key;
-          input.value = value;
-          form.appendChild(input);
-        });
+        try {
+          const response = await axios.post(
+            paymentData.url,
+            formData,
+            { responseType: "blob" }
+          );
+          
+          const blob = new Blob([response.data], { type: "text/html" });
+          const url = URL.createObjectURL(blob);
+          window.open(url, "_blank");
+        } catch (error) {
+          console.error("Erreur de paiement :", error);
+          toast.error("Erreur lors du traitement du paiement");
+        }
 
-        document.body.appendChild(form);
-        form.submit();
       } else {
         toast.error(data.message);
       }

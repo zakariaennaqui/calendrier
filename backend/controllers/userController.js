@@ -324,35 +324,42 @@ const verifyStripe = async (req, res) => {
 const paymentPayzone = async (req, res) => {
   try {
     const { appointmentId } = req.body;
+    const userId = req.userId;
     const appointment = await appointmentModel.findById(appointmentId);
 
     if (!appointment || appointment.cancelled) {
       return res.json({ success: false, message: "Appointment not found or cancelled" });
     }
 
-    const merchantId = process.env.PAYZONE_MERCHANT_ID;
-    const secretKey = process.env.PAYZONE_SECRET;
+    const userData = await userModel.findById(userId).select('-password');
+    if (!userData) {
+      return res.json({ success: false, message: "User not found" });
+    }
+
+    // Get client IP address
+    const clientIp = req.headers['x-forwarded-for'] || 
+                     req.headers['x-real-ip'] || 
+                     req.connection.remoteAddress || 
+                     req.socket.remoteAddress ||
+                     (req.connection.socket ? req.connection.socket.remoteAddress : null) ||
+                     req.ip || '127.0.0.1';
+
     const amount = appointment.amount;
 
-    const returnUrl = `${req.headers.origin}/verify-payment?provider=payzone&success=true&appointmentId=${appointmentId}`;
-
-    // Signature simulée (à adapter selon documentation Payzone)
-    const crypto = await import('crypto');
-    const signature = crypto.createHash('sha256').update(
-      merchantId + appointmentId + amount + secretKey
-    ).digest('hex');
+    const paymentUrl = process.env.PAYZONE_PAYMENT_URL || 'https://vps.les-experts.ma/';
 
     res.json({
       success: true,
-      formData: {
-        url: 'https://sandbox.payzone.ma/payment', // à remplacer par URL réelle Payzone
-        data: {
-          merchant_id: merchantId,
-          appointment_id: appointmentId,
-          amount,
-          return_url: returnUrl,
-          signature
-        }
+      paymentData: {
+        url: paymentUrl,
+        customerId: userId,
+        orderId: appointmentId,
+        price: amount,
+        description: "Réservation sur Experlik",
+        customerEmail: userData.email,
+        customerName: userData.name,
+        ipAddress: clientIp,
+        applicationSource: "Experlik"
       }
     });
 
@@ -469,34 +476,42 @@ const verifyCalendarStripe = async (req, res) => {
 const calendarPaymentPayzone = async (req, res) => {
     try {
         const { slotId } = req.body;
+        const userId = req.userId;
         const slot = await calendarSlotModel.findById(slotId);
 
         if (!slot || slot.cancelled) {
             return res.json({ success: false, message: "Créneau non trouvé ou annulé" });
         }
 
-        const merchantId = process.env.PAYZONE_MERCHANT_ID;
-        const secretKey = process.env.PAYZONE_SECRET;
+        const userData = await userModel.findById(userId).select('-password');
+        if (!userData) {
+            return res.json({ success: false, message: "User not found" });
+        }
+
+        // Get client IP address
+        const clientIp = req.headers['x-forwarded-for'] || 
+                         req.headers['x-real-ip'] || 
+                         req.connection.remoteAddress || 
+                         req.socket.remoteAddress ||
+                         (req.connection.socket ? req.connection.socket.remoteAddress : null) ||
+                         req.ip || '127.0.0.1';
+
         const amount = slot.amount;
 
-        const returnUrl = `${req.headers.origin}/verify-calendar-payment?provider=payzone&success=true&slotId=${slotId}`;
-
-        const crypto = await import('crypto');
-        const signature = crypto.createHash('sha256').update(
-            merchantId + slotId + amount + secretKey
-        ).digest('hex');
+        const paymentUrl = process.env.PAYZONE_PAYMENT_URL || 'https://vps.les-experts.ma/';
 
         res.json({
             success: true,
-            formData: {
-                url: 'https://sandbox.payzone.ma/payment',
-                data: {
-                    merchant_id: merchantId,
-                    slot_id: slotId,
-                    amount,
-                    return_url: returnUrl,
-                    signature
-                }
+            paymentData: {
+                url: paymentUrl,
+                customerId: userId,
+                orderId: slotId,
+                price: amount,
+                description: "Réservation créneau sur Experlik",
+                customerEmail: userData.email,
+                customerName: userData.name,
+                ipAddress: clientIp,
+                applicationSource: "Experlik"
             }
         });
 

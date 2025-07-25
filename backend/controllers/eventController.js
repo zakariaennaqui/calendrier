@@ -513,6 +513,11 @@ const eventPaymentPayzone = async (req, res) => {
             return res.json({ success: false, message: "Event not found" });
         }
 
+        const userData = await userModel.findById(userId).select('-password');
+        if (!userData) {
+            return res.json({ success: false, message: "User not found" });
+        }
+
         let finalPrice = event.price;
         let usedPromoCode = null;
 
@@ -537,29 +542,29 @@ const eventPaymentPayzone = async (req, res) => {
             }
         }
 
-        const merchantId = process.env.PAYZONE_MERCHANT_ID;
-        const secretKey = process.env.PAYZONE_SECRET;
-        const returnUrl = `${req.headers.origin}/verify-event-payment?provider=payzone&success=true&eventId=${eventId}&promoCode=${usedPromoCode || ''}`;
+        // Get client IP address
+        const clientIp = req.headers['x-forwarded-for'] || 
+                         req.headers['x-real-ip'] || 
+                         req.connection.remoteAddress || 
+                         req.socket.remoteAddress ||
+                         (req.connection.socket ? req.connection.socket.remoteAddress : null) ||
+                         req.ip || '127.0.0.1';
 
-        // Signature simulée (à adapter selon documentation Payzone)
-        const crypto = await import('crypto');
-        const signature = crypto.createHash('sha256').update(
-            merchantId + eventId + finalPrice + secretKey
-        ).digest('hex');
+        const paymentUrl = process.env.PAYZONE_PAYMENT_URL || 'https://vps.les-experts.ma/';
 
         res.json({
             success: true,
-            formData: {
-                url: 'https://sandbox.payzone.ma/payment',
-                data: {
-                    merchant_id: merchantId,
-                    event_id: eventId,
-                    amount: finalPrice,
-                    return_url: returnUrl,
-                    signature,
-                    user_id: userId,
-                    promo_code: usedPromoCode || ''
-                }
+            paymentData: {
+                url: paymentUrl,
+                customerId: userId,
+                orderId: eventId,
+                price: finalPrice,
+                description: `Inscription événement: ${event.title}`,
+                customerEmail: userData.email,
+                customerName: userData.name,
+                ipAddress: clientIp,
+                applicationSource: "Experlik",
+                promoCode: usedPromoCode || ''
             }
         });
 
